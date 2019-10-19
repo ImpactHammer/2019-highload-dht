@@ -8,12 +8,14 @@ import java.nio.ByteBuffer;
 import java.util.Iterator;
 
 public class RocksRecordIterator implements Iterator<Record> {
-    private RocksIterator rocksIterator;
+    private final RocksIterator rocksIterator;
 
-    RocksRecordIterator(RocksDB db, ByteBuffer from) {
+    RocksRecordIterator(final RocksDB db, final ByteBuffer from) {
         super();
         rocksIterator = db.newIterator();
-        rocksIterator.seek(from.array());
+        byte[] bytes = new byte[from.remaining()];
+        from.get(bytes);
+        rocksIterator.seek(bytes);
     }
 
     @Override
@@ -23,7 +25,7 @@ public class RocksRecordIterator implements Iterator<Record> {
 
     @Override
     public Record next() {
-        Record resultRecord = Record.of(ByteBuffer.wrap(rocksIterator.key()),
+        final Record resultRecord = Record.of(ByteBuffer.wrap(rocksIterator.key()),
                 ByteBuffer.wrap(rocksIterator.value()));
         if (rocksIterator.isValid()) {
             rocksIterator.next();

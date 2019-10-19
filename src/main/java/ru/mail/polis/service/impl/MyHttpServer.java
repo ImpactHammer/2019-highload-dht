@@ -1,7 +1,13 @@
 package ru.mail.polis.service.impl;
 
 import com.google.common.base.Charsets;
-import one.nio.http.*;
+import one.nio.http.HttpServer;
+import one.nio.http.HttpServerConfig;
+import one.nio.http.HttpSession;
+import one.nio.http.Param;
+import one.nio.http.Path;
+import one.nio.http.Request;
+import one.nio.http.Response;
 import one.nio.server.AcceptorConfig;
 import org.jetbrains.annotations.NotNull;
 import ru.mail.polis.dao.DAO;
@@ -12,51 +18,59 @@ import java.nio.ByteBuffer;
 import java.util.NoSuchElementException;
 
 public class MyHttpServer extends HttpServer implements Service {
-    private DAO dao;
+    private final DAO dao;
 
-    public MyHttpServer(final int port, @NotNull DAO dao) throws IOException {
+    public MyHttpServer(final int port, @NotNull final DAO dao) throws IOException {
         super(getConfig(port));
         this.dao = dao;
     }
 
+    /**
+     * @param id Key
+     * @param request Http Request
+     * @return Http Response
+     */
     @Path("/v0/entity")
     public Response entity(@Param("id") final String id,
-                           final Request request) {
+                           final Request request) throws IOException {
         if (id == null || id.isEmpty()) {
             return new Response(Response.BAD_REQUEST, Response.EMPTY);
         }
-        ByteBuffer key = ByteBuffer.wrap(id.getBytes(Charsets.UTF_8));
-        try {
+        final ByteBuffer key = ByteBuffer.wrap(id.getBytes(Charsets.UTF_8));
+        Response response = new Response(Response.INTERNAL_ERROR, Response.EMPTY);
+
             switch (request.getMethod()) {
                 case Request.METHOD_GET:
-                    try {
-                        final ByteBuffer value = dao.get(key).duplicate();
-                        byte[] body = value.array();
-                        return new Response(Response.OK, body);
-                    }
-                    catch (NoSuchElementException e) {
-                        return new Response(Response.NOT_FOUND, "Key not found".getBytes(Charsets.UTF_8));
-                    }
-                    catch (Exception e) {
-                        e.printStackTrace();
-                    }
+                    response = get(key);
                     break;
 
                 case Request.METHOD_PUT:
                     dao.upsert(key, ByteBuffer.wrap(request.getBody()));
-                    return new Response(Response.CREATED, Response.EMPTY);
+                    response = new Response(Response.CREATED, Response.EMPTY);
+                    break;
 
                 case Request.METHOD_DELETE:
                     dao.remove(key);
-                    return new Response(Response.ACCEPTED, Response.EMPTY);
+                    response = new Response(Response.ACCEPTED, Response.EMPTY);
+                    break;
 
                 default:
-                    return new Response(Response.METHOD_NOT_ALLOWED, Response.EMPTY);
+                    response = new Response(Response.METHOD_NOT_ALLOWED, Response.EMPTY);
+                    break;
             }
-        } catch (IOException e) {
-            e.printStackTrace();
+        return response;
+    }
+
+    Response get(final ByteBuffer key) throws IOException {
+        try {
+            final ByteBuffer value = dao.get(key).duplicate();
+            final byte[] body = new byte[value.remaining()];
+            value.get(body);
+            return new Response(Response.OK, body);
         }
-        return new Response(Response.INTERNAL_ERROR, Response.EMPTY);
+        catch (NoSuchElementException e) {
+            return new Response(Response.NOT_FOUND, "Key not found".getBytes(Charsets.UTF_8));
+        }
     }
 
     @Path("/v0/status")
@@ -65,8 +79,8 @@ public class MyHttpServer extends HttpServer implements Service {
     }
 
     @Override
-    public void handleDefault(Request request, HttpSession session) throws IOException {
-        Response response = new Response(Response.BAD_REQUEST, Response.EMPTY);
+    public void handleDefault(final Request request, final HttpSession session) throws IOException {
+        final Response response = new Response(Response.BAD_REQUEST, Response.EMPTY);
         session.sendResponse(response);
     }
 
@@ -74,9 +88,9 @@ public class MyHttpServer extends HttpServer implements Service {
         if (port <= 1024 || port >= 65535) {
             throw new IllegalArgumentException("Invalid port");
         }
-        AcceptorConfig acceptor = new AcceptorConfig();
+        final AcceptorConfig acceptor = new AcceptorConfig();
         acceptor.port = port;
-        HttpServerConfig httpServerConfig = new HttpServerConfig();
+        final HttpServerConfig httpServerConfig = new HttpServerConfig();
         httpServerConfig.acceptors = new AcceptorConfig[]{acceptor};
         httpServerConfig.selectors = 4;
         return httpServerConfig;

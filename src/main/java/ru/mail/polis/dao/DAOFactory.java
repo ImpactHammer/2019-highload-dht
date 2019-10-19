@@ -20,6 +20,7 @@ import java.io.File;
 import java.io.IOException;
 
 import org.jetbrains.annotations.NotNull;
+import org.rocksdb.RocksDBException;
 import ru.mail.polis.dao.impl.RocksDAO;
 
 /**
@@ -54,6 +55,10 @@ public final class DAOFactory {
             throw new IllegalArgumentException("Path is not a directory: " + data);
         }
 
-        return new RocksDAO(data);
+        try {
+            return new RocksDAO(data);
+        } catch (RocksDBException e) {
+            throw new RuntimeException();
+        }
     }
 }

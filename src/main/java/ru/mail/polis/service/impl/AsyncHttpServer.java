@@ -93,12 +93,8 @@ public class AsyncHttpServer extends HttpServer implements Service {
         workerThreads.execute(() -> {
             try {
                 session.sendResponse(action.act());
-            } catch (IOException e) {
-                try {
-                    session.sendError(INTERNAL_ERROR, e.getMessage());
-                } catch (IOException ex) {
-                    e.printStackTrace();
-                }
+            } catch (IOException ignored) {
+
             }
         });
     }
@@ -143,11 +139,12 @@ public class AsyncHttpServer extends HttpServer implements Service {
     }
 
     @NotNull
-    private Response getMethodWrapper(final ByteBuffer key) {
-        Response response = new Response(Response.NOT_FOUND, "Key not found".getBytes(Charsets.UTF_8));
+    private Response getMethodWrapper(final ByteBuffer key) throws IOException {
+        Response response;
         try {
             final ByteBuffer value = dao.get(key).duplicate();
-            byte[] body = value.array();
+            byte[] body = new byte[value.remaining()];
+            value.get(body);
             response = new Response(Response.OK, body);
             return response;
         }
@@ -155,10 +152,6 @@ public class AsyncHttpServer extends HttpServer implements Service {
             response = new Response(Response.NOT_FOUND, "Key not found".getBytes(Charsets.UTF_8));
             return response;
         }
-        catch (Exception e) {
-            e.printStackTrace();
-        }
-        return response;
     }
 
     @NotNull

@@ -7,31 +7,31 @@ import java.util.Iterator;
 import java.util.NoSuchElementException;
 
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
-import org.rocksdb.*;
+import org.rocksdb.ComparatorOptions;
+import org.rocksdb.Options;
+import org.rocksdb.RocksDB;
+import org.rocksdb.RocksDBException;
 import org.rocksdb.util.BytewiseComparator;
 
 import ru.mail.polis.Record;
 import ru.mail.polis.dao.DAO;
-import ru.mail.polis.dao.Iters;
 
 public class RocksDAO implements DAO {
     private RocksDB db;
 
-    public RocksDAO(@NotNull final File data) {
+    /**
+     * @param data Database file
+     */
+    public RocksDAO(@NotNull final File data) throws RocksDBException {
         RocksDB.loadLibrary();
         final Options options = new Options().setCreateIfMissing(true);
         options.setComparator(new BytewiseComparator(new ComparatorOptions()));
-        try {
-            db = RocksDB.open(options, data.getAbsolutePath());
-        } catch (RocksDBException e) {
-            e.printStackTrace();
-        }
+        db = RocksDB.open(options, data.getAbsolutePath());
     }
 
-    private ByteBuffer deepCopy(ByteBuffer src) {
-        ByteBuffer clone = ByteBuffer.allocate(src.capacity());
+    private ByteBuffer deepCopy(final ByteBuffer src) {
+        final ByteBuffer clone = ByteBuffer.allocate(src.capacity());
         src.rewind();
         clone.put(src);
         src.rewind();
@@ -39,27 +39,29 @@ public class RocksDAO implements DAO {
         return clone;
     }
 
+    @Override
     public void upsert(
-            @NotNull ByteBuffer key,
-            @NotNull ByteBuffer value) {
+            @NotNull final ByteBuffer key,
+            @NotNull final ByteBuffer value) {
         try {
             db.put(deepCopy(key).array(), deepCopy(value).array());
-        } catch (RocksDBException e) {
-            e.printStackTrace();
+        } catch (RocksDBException ignored) {
+
         }
     }
 
-    public void remove(@NotNull ByteBuffer key) {
+    @Override
+    public void remove(@NotNull final ByteBuffer key) {
         try {
             db.delete(deepCopy(key).array());
-        } catch (RocksDBException e) {
-            e.printStackTrace();
+        } catch (RocksDBException ignored) {
+
         }
     }
 
     @NotNull
     @Override
-    public Iterator<Record> iterator(@NotNull ByteBuffer from) {
+    public Iterator<Record> iterator(@NotNull final ByteBuffer from) {
         return new RocksRecordIterator(db, from);
     }
 
@@ -70,12 +72,12 @@ public class RocksDAO implements DAO {
 
     @NotNull
     @Override
-    public ByteBuffer get(@NotNull ByteBuffer key) throws NoSuchElementException {
+    public ByteBuffer get(@NotNull final ByteBuffer key) throws NoSuchElementException {
         byte[] bytes = null;
         try {
             bytes = db.get(deepCopy(key).array());
-        } catch (RocksDBException e) {
-            e.printStackTrace();
+        } catch (RocksDBException ignored) {
+
         }
         if (bytes == null) {
             throw new NoSuchElementLite();
@@ -87,8 +89,8 @@ public class RocksDAO implements DAO {
     public void compact() {
         try {
             db.compactRange();
-        } catch (RocksDBException e) {
-            e.printStackTrace();
+        } catch (RocksDBException ignored) {
+
         }
     }
 }

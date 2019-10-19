@@ -20,6 +20,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Collections;
 
+import org.rocksdb.RocksDBException;
 import ru.mail.polis.dao.DAO;
 import ru.mail.polis.dao.DAOFactory;
 import ru.mail.polis.service.Service;
@@ -37,7 +38,7 @@ public final class Server {
         // Not instantiable
     }
 
-    public static void main(final String[] args) throws IOException {
+    public static void main(final String[] args) throws IOException, RocksDBException {
         // Temporary storage in the file system
         final File data = Files.createTempDirectory();
 
