@@ -70,14 +70,6 @@ public class RocksDAO implements DAO {
 
     @NotNull
     @Override
-    public Iterator<Record> range(@NotNull ByteBuffer from, @Nullable ByteBuffer to) {
-        assert to != null;
-        return Iters.until(new RocksRecordIterator(db, from),
-                Record.of(to, ByteBuffer.allocate(0)));
-    }
-
-    @NotNull
-    @Override
     public ByteBuffer get(@NotNull ByteBuffer key) throws NoSuchElementException {
         byte[] bytes = null;
         try {
@@ -93,6 +85,10 @@ public class RocksDAO implements DAO {
 
     @Override
     public void compact() {
-
+        try {
+            db.compactRange();
+        } catch (RocksDBException e) {
+            e.printStackTrace();
+        }
     }
 }

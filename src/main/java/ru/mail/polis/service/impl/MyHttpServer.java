@@ -40,6 +40,7 @@ public class MyHttpServer extends HttpServer implements Service {
                     catch (Exception e) {
                         e.printStackTrace();
                     }
+                    break;
 
                 case Request.METHOD_PUT:
                     dao.upsert(key, ByteBuffer.wrap(request.getBody()));
@@ -53,8 +54,9 @@ public class MyHttpServer extends HttpServer implements Service {
                     return new Response(Response.METHOD_NOT_ALLOWED, Response.EMPTY);
             }
         } catch (IOException e) {
-            return new Response(Response.INTERNAL_ERROR, Response.EMPTY);
+            e.printStackTrace();
         }
+        return new Response(Response.INTERNAL_ERROR, Response.EMPTY);
     }
 
     @Path("/v0/status")

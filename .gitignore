@@ -16,4 +16,4 @@
 
 # ...even if they are in subdirectories
 !*/
-!perfTest/*
+!perfTest/**

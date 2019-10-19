@@ -17,10 +17,14 @@
 package ru.mail.polis.service;
 
 import java.io.IOException;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.jetbrains.annotations.NotNull;
 
 import ru.mail.polis.dao.DAO;
+import ru.mail.polis.service.impl.AsyncHttpServer;
 import ru.mail.polis.service.impl.MyHttpServer;
 
 /**
@@ -54,6 +58,9 @@ public final class ServiceFactory {
             throw new IllegalArgumentException("Port out of range");
         }
 
-        return new MyHttpServer(port, dao);
+//        return new MyHttpServer(port, dao);
+        final Executor executor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors(),
+                new ThreadFactoryBuilder().setNameFormat("worker").build());
+        return new AsyncHttpServer(port, dao, executor);
     }
 }
