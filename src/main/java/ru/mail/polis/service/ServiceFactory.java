@@ -26,7 +26,6 @@ import org.jetbrains.annotations.NotNull;
 
 import ru.mail.polis.dao.DAO;
 import ru.mail.polis.service.impl.AsyncHttpServer;
-import ru.mail.polis.service.impl.MyHttpServer;
 
 /**
  * Constructs {@link Service} instances.
@@ -61,7 +60,6 @@ public final class ServiceFactory {
             throw new IllegalArgumentException("Port out of range");
         }
 
-//        return new MyHttpServer(port, dao);
         final Executor executor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors(),
                 new ThreadFactoryBuilder().setNameFormat("worker").build());
         return new AsyncHttpServer(port, dao, executor);
