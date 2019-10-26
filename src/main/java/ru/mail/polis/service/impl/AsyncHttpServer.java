@@ -149,7 +149,7 @@ public class AsyncHttpServer extends HttpServer implements Service {
             return;
         }
 
-        final boolean notEndSpecified =  end == null || end.isEmpty();
+        final boolean notEndSpecified = end == null || end.isEmpty();
 
         try {
             final Iterator<Record> records =
