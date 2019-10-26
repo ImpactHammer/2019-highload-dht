@@ -25,7 +25,7 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.jetbrains.annotations.NotNull;
 
 import ru.mail.polis.dao.DAO;
-import ru.mail.polis.service.impl.AsyncHttpServer;
+import ru.mail.polis.service.impl.*;
 
 /**
  * Constructs {@link Service} instances.
@@ -62,6 +62,7 @@ public final class ServiceFactory {
 
         final Executor executor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors(),
                 new ThreadFactoryBuilder().setNameFormat("worker").build());
-        return new AsyncHttpServer(port, dao, executor);
+        Topology nodes = new Topology(topology, "http://localhost:" + port);
+        return new ShardedHttpServer(port, dao, executor, nodes);
     }
 }

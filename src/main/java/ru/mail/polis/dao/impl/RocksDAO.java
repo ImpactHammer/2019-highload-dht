@@ -42,20 +42,20 @@ public class RocksDAO implements DAO {
     @Override
     public void upsert(
             @NotNull final ByteBuffer key,
-            @NotNull final ByteBuffer value) {
+            @NotNull final ByteBuffer value) throws IOException {
         try {
             db.put(deepCopy(key).array(), deepCopy(value).array());
-        } catch (RocksDBException ignored) {
-
+        } catch (RocksDBException e) {
+            throw new IOException(e);
         }
     }
 
     @Override
-    public void remove(@NotNull final ByteBuffer key) {
+    public void remove(@NotNull final ByteBuffer key) throws IOException {
         try {
             db.delete(deepCopy(key).array());
-        } catch (RocksDBException ignored) {
-
+        } catch (RocksDBException e) {
+            throw new IOException(e);
         }
     }
 
@@ -72,12 +72,12 @@ public class RocksDAO implements DAO {
 
     @NotNull
     @Override
-    public ByteBuffer get(@NotNull final ByteBuffer key) throws NoSuchElementException {
+    public ByteBuffer get(@NotNull final ByteBuffer key) throws NoSuchElementException, IOException {
         byte[] bytes = null;
         try {
             bytes = db.get(deepCopy(key).array());
-        } catch (RocksDBException ignored) {
-
+        } catch (RocksDBException e) {
+            throw new IOException(e);
         }
         if (bytes == null) {
             throw new NoSuchElementLite();
@@ -86,11 +86,11 @@ public class RocksDAO implements DAO {
     }
 
     @Override
-    public void compact() {
+    public void compact() throws IOException {
         try {
             db.compactRange();
-        } catch (RocksDBException ignored) {
-
+        } catch (RocksDBException e) {
+            throw new IOException(e);
         }
     }
 }

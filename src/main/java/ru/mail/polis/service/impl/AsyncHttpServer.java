@@ -66,21 +66,19 @@ public class AsyncHttpServer extends HttpServer implements Service {
             switch (request.getMethod()) {
                 case Request.METHOD_GET:
                     executeAsync(session, () -> getMethodWrapper(key));
-                    return;
+                    break;
                 case Request.METHOD_PUT:
                     executeAsync(session, () -> putMethodWrapper(key, request));
-                    return;
+                    break;
                 case Request.METHOD_DELETE:
                     executeAsync(session, () -> deleteMethodWrapper(key));
-                    return;
+                    break;
                 default:
                     session.sendError(METHOD_NOT_ALLOWED, "Wrong method");
-                    return;
             }
         } catch (IOException e) {
             session.sendError(INTERNAL_ERROR, e.getMessage());
         }
-        return;
     }
 
     @Override
@@ -89,12 +87,16 @@ public class AsyncHttpServer extends HttpServer implements Service {
         session.sendResponse(response);
     }
 
-    private void executeAsync(@NotNull final HttpSession session, @NotNull final Action action) throws IOException {
+    void executeAsync(@NotNull final HttpSession session, @NotNull final Action action) {
         workerThreads.execute(() -> {
             try {
                 session.sendResponse(action.act());
-            } catch (IOException ignored) {
-
+            } catch (IOException e) {
+                try {
+                    session.sendError(Response.INTERNAL_ERROR, e.getMessage());
+                } catch (IOException ex) {
+//                    ex.printStackTrace();
+                }
             }
         });
     }
@@ -134,7 +136,7 @@ public class AsyncHttpServer extends HttpServer implements Service {
     }
 
     @NotNull
-    private Response badRequest() {
+    Response badRequest() {
         return new Response(Response.BAD_REQUEST, Response.EMPTY);
     }
 
@@ -156,7 +158,10 @@ public class AsyncHttpServer extends HttpServer implements Service {
 
     @NotNull
     private Response putMethodWrapper(final ByteBuffer key, final Request request) throws IOException {
-        dao.upsert(key, ByteBuffer.wrap(request.getBody()));
+        byte[] body = request.getBody();
+        if (body != null) {
+            dao.upsert(key, ByteBuffer.wrap(body));
+        }
         return new Response(Response.CREATED, Response.EMPTY);
     }
 
