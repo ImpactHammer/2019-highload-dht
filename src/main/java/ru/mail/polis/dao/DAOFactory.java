@@ -58,7 +58,7 @@ public final class DAOFactory {
         try {
             return new RocksDAO(data);
         } catch (RocksDBException e) {
-            throw new RuntimeException();
+            throw new RuntimeException(e);
         }
     }
 }

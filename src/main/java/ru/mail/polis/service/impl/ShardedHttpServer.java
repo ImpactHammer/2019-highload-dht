@@ -1,6 +1,12 @@
 package ru.mail.polis.service.impl;
 
-import one.nio.http.*;
+import one.nio.http.HttpClient;
+import one.nio.http.HttpException;
+import one.nio.http.HttpSession;
+import one.nio.http.Param;
+import one.nio.http.Path;
+import one.nio.http.Request;
+import one.nio.http.Response;
 import one.nio.net.ConnectionString;
 import one.nio.pool.PoolException;
 import org.jetbrains.annotations.NotNull;
@@ -17,6 +23,13 @@ public class ShardedHttpServer extends AsyncHttpServer {
     private final Topology topology;
     private final Map<String, HttpClient> pool;
 
+    /**
+     *
+     * @param port - network port
+     * @param dao - DAO instance
+     * @param executor - executor
+     * @param topology - Topology describing cluster
+     */
     public ShardedHttpServer(
             final int port,
             @NotNull final DAO dao,
@@ -39,17 +52,17 @@ public class ShardedHttpServer extends AsyncHttpServer {
 
     @Override @Path("/v0/entity")
     public void entity(@Param("id") final String id,
-                       @NotNull final Request request, HttpSession session) throws IOException {
+                       @NotNull final Request request, final HttpSession session) throws IOException {
         if (id == null || id.isEmpty()) {
             executeAsync(session, () -> badRequest());
             return;
         }
         final ByteBuffer key = ByteBuffer.wrap(id.getBytes(StandardCharsets.UTF_8));
         final String primary = topology.primaryFor(key);
-        if (!topology.isMe(primary)) {
-            executeAsync(session, () -> proxy(primary, request));
-        } else {
+        if (topology.isMe(primary)) {
             super.entity(id, request, session);
+        } else {
+            executeAsync(session, () -> proxy(primary, request));
         }
     }
 

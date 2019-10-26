@@ -1,7 +1,13 @@
 package ru.mail.polis.service.impl;
 
 import com.google.common.base.Charsets;
-import one.nio.http.*;
+import one.nio.http.HttpServer;
+import one.nio.http.HttpServerConfig;
+import one.nio.http.HttpSession;
+import one.nio.http.Param;
+import one.nio.http.Path;
+import one.nio.http.Request;
+import one.nio.http.Response;
 import one.nio.net.Socket;
 import one.nio.server.AcceptorConfig;
 import org.jetbrains.annotations.NotNull;
@@ -16,16 +22,19 @@ import java.util.Iterator;
 import java.util.NoSuchElementException;
 import java.util.concurrent.Executor;
 
-import static one.nio.http.Response.METHOD_NOT_ALLOWED;
-import static one.nio.http.Response.INTERNAL_ERROR;
-import static one.nio.http.Response.BAD_REQUEST;
-
 public class AsyncHttpServer extends HttpServer implements Service {
     @NotNull
     private final DAO dao;
     @NotNull
     private final Executor workerThreads;
 
+    /**
+     * constructor
+     *
+     * @param port - network port
+     * @param dao - DAO instance
+     * @param workers - executor
+     */
     public AsyncHttpServer(final int port, @NotNull final DAO dao,
                            @NotNull final Executor workers) throws IOException {
         super(from(port));
@@ -54,9 +63,16 @@ public class AsyncHttpServer extends HttpServer implements Service {
         return Response.ok("OK");
     }
 
+    /**
+     * single element request handler
+     *
+     * @param id - element key
+     * @param request - http request
+     * @param session - http session
+     */
     @Path("/v0/entity")
     public void entity(@Param("id") final String id,
-                        @NotNull final Request request, HttpSession session) throws IOException {
+                       @NotNull final Request request, final HttpSession session) throws IOException {
         if (id == null || id.isEmpty()) {
             executeAsync(session, () -> badRequest());
             return;
@@ -74,16 +90,17 @@ public class AsyncHttpServer extends HttpServer implements Service {
                     executeAsync(session, () -> deleteMethodWrapper(key));
                     break;
                 default:
-                    session.sendError(METHOD_NOT_ALLOWED, "Wrong method");
+                    session.sendError(Response.METHOD_NOT_ALLOWED, "Wrong method");
+                    break;
             }
         } catch (IOException e) {
-            session.sendError(INTERNAL_ERROR, e.getMessage());
+            session.sendError(Response.INTERNAL_ERROR, e.getMessage());
         }
     }
 
     @Override
-    public void handleDefault(Request request, HttpSession session) throws IOException {
-        Response response = new Response(Response.BAD_REQUEST, Response.EMPTY);
+    public void handleDefault(final Request request, HttpSession session) throws IOException {
+        final Response response = new Response(Response.BAD_REQUEST, Response.EMPTY);
         session.sendResponse(response);
     }
 
@@ -95,7 +112,7 @@ public class AsyncHttpServer extends HttpServer implements Service {
                 try {
                     session.sendError(Response.INTERNAL_ERROR, e.getMessage());
                 } catch (IOException ex) {
-//                    ex.printStackTrace();
+                    System.out.println("Can't send error response");
                 }
             }
         });
@@ -106,32 +123,39 @@ public class AsyncHttpServer extends HttpServer implements Service {
         Response act() throws IOException;
     }
 
+    /**
+     * multiple element request handler
+     *
+     * @param start - start key
+     * @param end - end key
+     * @param request - http request
+     * @param session - http session
+     * @throws IOException
+     */
     @Path("/v0/entities")
     public void entities(@Param("start") final String start,
                           @Param("end") String end,
                           @NotNull final Request request, @NotNull final HttpSession session) throws IOException {
 
         if (start == null || start.isEmpty()) {
-            session.sendError(BAD_REQUEST, "No start");
+            session.sendError(Response.BAD_REQUEST, "No start");
             return;
         }
 
         if (request.getMethod() != Request.METHOD_GET) {
-            session.sendError(METHOD_NOT_ALLOWED, "Wrong method");
+            session.sendError(Response.METHOD_NOT_ALLOWED, "Wrong method");
             return;
         }
 
-        if (end != null && end.isEmpty()) {
-            end = null;
-        }
+        boolean isEndSpecified = (end != null && end.isEmpty());
 
         try {
             final Iterator<Record> records =
                     dao.range(ByteBuffer.wrap(start.getBytes(StandardCharsets.UTF_8)),
-                            end == null ? null : ByteBuffer.wrap(end.getBytes(StandardCharsets.UTF_8)));
+                            !isEndSpecified ? null : ByteBuffer.wrap(end.getBytes(StandardCharsets.UTF_8)));
             ((StorageSession) session).stream(records);
         } catch (IOException e) {
-            session.sendError(INTERNAL_ERROR, e.getMessage());
+            session.sendError(Response.INTERNAL_ERROR, e.getMessage());
         }
     }
 
@@ -145,7 +169,7 @@ public class AsyncHttpServer extends HttpServer implements Service {
         Response response;
         try {
             final ByteBuffer value = dao.get(key).duplicate();
-            byte[] body = new byte[value.remaining()];
+            final byte[] body = new byte[value.remaining()];
             value.get(body);
             response = new Response(Response.OK, body);
             return response;
@@ -158,7 +182,7 @@ public class AsyncHttpServer extends HttpServer implements Service {
 
     @NotNull
     private Response putMethodWrapper(final ByteBuffer key, final Request request) throws IOException {
-        byte[] body = request.getBody();
+        final byte[] body = request.getBody();
         if (body != null) {
             dao.upsert(key, ByteBuffer.wrap(body));
         }
