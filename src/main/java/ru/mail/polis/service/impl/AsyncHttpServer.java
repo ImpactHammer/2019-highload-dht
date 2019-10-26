@@ -10,6 +10,8 @@ import one.nio.http.Request;
 import one.nio.http.Response;
 import one.nio.net.Socket;
 import one.nio.server.AcceptorConfig;
+import org.apache.log4j.LogManager;
+import org.apache.log4j.Logger;
 import org.jetbrains.annotations.NotNull;
 import ru.mail.polis.Record;
 import ru.mail.polis.dao.DAO;
@@ -27,9 +29,10 @@ public class AsyncHttpServer extends HttpServer implements Service {
     private final DAO dao;
     @NotNull
     private final Executor workerThreads;
+    private final Logger log = LogManager.getLogger("default");
 
     /**
-     * constructor
+     * Constructor.
      *
      * @param port - network port
      * @param dao - DAO instance
@@ -64,7 +67,7 @@ public class AsyncHttpServer extends HttpServer implements Service {
     }
 
     /**
-     * single element request handler
+     * Single element request handler.
      *
      * @param id - element key
      * @param request - http request
@@ -99,7 +102,7 @@ public class AsyncHttpServer extends HttpServer implements Service {
     }
 
     @Override
-    public void handleDefault(final Request request, HttpSession session) throws IOException {
+    public void handleDefault(final Request request, final HttpSession session) throws IOException {
         final Response response = new Response(Response.BAD_REQUEST, Response.EMPTY);
         session.sendResponse(response);
     }
@@ -112,7 +115,7 @@ public class AsyncHttpServer extends HttpServer implements Service {
                 try {
                     session.sendError(Response.INTERNAL_ERROR, e.getMessage());
                 } catch (IOException ex) {
-                    System.out.println("Can't send error response");
+                    log.debug("Can't send error response");
                 }
             }
         });
@@ -124,17 +127,16 @@ public class AsyncHttpServer extends HttpServer implements Service {
     }
 
     /**
-     * multiple element request handler
+     * Multiple element request handler.
      *
      * @param start - start key
      * @param end - end key
      * @param request - http request
      * @param session - http session
-     * @throws IOException
      */
     @Path("/v0/entities")
     public void entities(@Param("start") final String start,
-                          @Param("end") String end,
+                          @Param("end") final String end,
                           @NotNull final Request request, @NotNull final HttpSession session) throws IOException {
 
         if (start == null || start.isEmpty()) {
@@ -147,12 +149,12 @@ public class AsyncHttpServer extends HttpServer implements Service {
             return;
         }
 
-        boolean isEndSpecified = (end != null && end.isEmpty());
+        final boolean notEndSpecified =  end == null || end.isEmpty();
 
         try {
             final Iterator<Record> records =
                     dao.range(ByteBuffer.wrap(start.getBytes(StandardCharsets.UTF_8)),
-                            !isEndSpecified ? null : ByteBuffer.wrap(end.getBytes(StandardCharsets.UTF_8)));
+                            notEndSpecified ? null : ByteBuffer.wrap(end.getBytes(StandardCharsets.UTF_8)));
             ((StorageSession) session).stream(records);
         } catch (IOException e) {
             session.sendError(Response.INTERNAL_ERROR, e.getMessage());

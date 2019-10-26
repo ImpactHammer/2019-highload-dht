@@ -18,10 +18,10 @@ import ru.mail.polis.Record;
 import ru.mail.polis.dao.DAO;
 
 public class RocksDAO implements DAO {
-    final private RocksDB db;
+    private final RocksDB db;
 
     /**
-     * constructor
+     * Constructor.
      *
      * @param data Database file
      */

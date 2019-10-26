@@ -11,6 +11,7 @@ public class Topology {
     final String me;
 
     /**
+     * Constructor.
      *
      * @param nodes - identifiers of all nodes
      * @param me - identifier of this node

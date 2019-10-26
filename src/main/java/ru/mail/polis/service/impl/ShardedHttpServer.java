@@ -24,6 +24,7 @@ public class ShardedHttpServer extends AsyncHttpServer {
     private final Map<String, HttpClient> pool;
 
     /**
+     * Constructor.
      *
      * @param port - network port
      * @param dao - DAO instance
@@ -50,7 +51,8 @@ public class ShardedHttpServer extends AsyncHttpServer {
         }
     }
 
-    @Override @Path("/v0/entity")
+    @Override
+    @Path("/v0/entity")
     public void entity(@Param("id") final String id,
                        @NotNull final Request request, final HttpSession session) throws IOException {
         if (id == null || id.isEmpty()) {
