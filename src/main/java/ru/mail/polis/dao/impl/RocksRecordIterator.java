@@ -13,9 +13,8 @@ public class RocksRecordIterator implements Iterator<Record> {
     RocksRecordIterator(final RocksDB db, final ByteBuffer from) {
         super();
         rocksIterator = db.newIterator();
-        final ByteBuffer fromCopy = from.duplicate();
-        final byte[] bytes = new byte[fromCopy.capacity()];
-        fromCopy.get(bytes, 0, bytes.length);
+        final byte[] bytes = RocksDAO.toByteArray(from);
+
         rocksIterator.seek(bytes);
     }
 

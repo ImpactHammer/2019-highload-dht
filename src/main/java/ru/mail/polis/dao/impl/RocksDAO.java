@@ -32,32 +32,36 @@ public class RocksDAO implements DAO {
         db = RocksDB.open(options, data.getAbsolutePath());
     }
 
-    private ByteBuffer deepCopy(final ByteBuffer src) {
+    public static synchronized byte[] toByteArray(final ByteBuffer src) {
         final ByteBuffer srcCopy = src.duplicate();
         final ByteBuffer clone = ByteBuffer.allocate(srcCopy.capacity());
         srcCopy.rewind();
         clone.put(srcCopy);
         clone.flip();
-        return clone;
+        return clone.array();
     }
 
     @Override
     public void upsert(
             @NotNull final ByteBuffer key,
             @NotNull final ByteBuffer value) throws IOException {
-        try {
-            db.put(deepCopy(key).array(), deepCopy(value).array());
-        } catch (RocksDBException e) {
-            throw new IOException(e);
+        synchronized (this) {
+            try {
+                db.put(toByteArray(key), toByteArray(value));
+            } catch (RocksDBException e) {
+                throw new IOException(e);
+            }
         }
     }
 
     @Override
     public void remove(@NotNull final ByteBuffer key) throws IOException {
-        try {
-            db.delete(deepCopy(key).array());
-        } catch (RocksDBException e) {
-            throw new IOException(e);
+        synchronized (this) {
+            try {
+                db.delete(toByteArray(key));
+            } catch (RocksDBException e) {
+                throw new IOException(e);
+            }
         }
     }
 
@@ -75,16 +79,18 @@ public class RocksDAO implements DAO {
     @NotNull
     @Override
     public ByteBuffer get(@NotNull final ByteBuffer key) throws NoSuchElementException, IOException {
-        byte[] bytes = null;
-        try {
-            bytes = db.get(deepCopy(key).array());
-        } catch (RocksDBException e) {
-            throw new IOException(e);
+        synchronized (this) {
+            byte[] bytes = null;
+            try {
+                bytes = db.get(toByteArray(key));
+            } catch (RocksDBException e) {
+                throw new IOException(e);
+            }
+            if (bytes == null) {
+                throw new NoSuchElementLite();
+            }
+            return ByteBuffer.wrap(bytes);
         }
-        if (bytes == null) {
-            throw new NoSuchElementLite();
-        }
-        return ByteBuffer.wrap(bytes);
     }
 
     @Override

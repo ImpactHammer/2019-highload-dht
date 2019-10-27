@@ -15,6 +15,7 @@ import org.apache.log4j.Logger;
 import org.jetbrains.annotations.NotNull;
 import ru.mail.polis.Record;
 import ru.mail.polis.dao.DAO;
+import ru.mail.polis.dao.impl.RocksDAO;
 import ru.mail.polis.service.Service;
 
 import java.io.IOException;
@@ -170,9 +171,9 @@ public class AsyncHttpServer extends HttpServer implements Service {
     private Response getMethodWrapper(final ByteBuffer key) throws IOException {
         Response response;
         try {
-            final ByteBuffer value = dao.get(key).duplicate();
-            final byte[] body = new byte[value.remaining()];
-            value.get(body);
+            final ByteBuffer value = dao.get(key);
+            final byte[] body = RocksDAO.toByteArray(value);
+
             response = new Response(Response.OK, body);
             return response;
         }

@@ -6,6 +6,7 @@ import one.nio.http.Response;
 import one.nio.net.Socket;
 import org.jetbrains.annotations.NotNull;
 import ru.mail.polis.Record;
+import ru.mail.polis.dao.impl.RocksDAO;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -34,13 +35,6 @@ final class StorageSession extends HttpSession {
         next();
     }
 
-    @NotNull
-    private static byte[] toByteArray(@NotNull final ByteBuffer buffer) {
-        final byte[] result = new byte[buffer.remaining()];
-        buffer.get(result);
-        return result;
-    }
-
     @Override
     protected void processWrite() throws Exception {
         super.processWrite();
@@ -55,8 +49,8 @@ final class StorageSession extends HttpSession {
     private void next() throws IOException {
         while (records.hasNext() && queueHead == null) {
             final Record record = records.next();
-            final byte[] key = toByteArray(record.getKey());
-            final byte[] value = toByteArray(record.getValue());
+            final byte[] key = RocksDAO.toByteArray(record.getKey());
+            final byte[] value = RocksDAO.toByteArray(record.getValue());
 
             final int payloadLength = key.length + 1 + value.length;
             final String size = Integer.toHexString(payloadLength);
