@@ -1,0 +1,26 @@
+
+Шардирование:
+
+get:
+#[Mean    =        3.059, StdDeviation   =        4.308]
+#[Max     =       22.080, Total count    =         9619]
+#[Buckets =           27, SubBuckets     =         2048]
+
+put:
+#[Mean    =        3.659, StdDeviation   =        5.521]
+#[Max     =       36.448, Total count    =         9618]
+#[Buckets =           27, SubBuckets     =         2048]
+
+Репликация:
+
+get:
+#[Mean    =        1.333, StdDeviation   =        0.912]
+#[Max     =       25.792, Total count    =         9777]
+#[Buckets =           27, SubBuckets     =         2048]
+
+put:
+#[Mean    =        1.707, StdDeviation   =        1.584]
+#[Max     =       42.208, Total count    =         9775]
+#[Buckets =           27, SubBuckets     =         2048]
+
+С предыдущего этапа среднее время обработки уменьшилось, хотя ожидался обратный эффект. Это может быть связано с внесением нескольких оптимизаций после Этапа 4. Максимальное время при этом увеличилось.
