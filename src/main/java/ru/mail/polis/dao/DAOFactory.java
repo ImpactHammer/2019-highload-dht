@@ -20,9 +20,7 @@ import java.io.File;
 import java.io.IOException;
 
 import org.jetbrains.annotations.NotNull;
-import org.rocksdb.ComparatorOptions;
 import org.rocksdb.RocksDBException;
-import org.rocksdb.util.BytewiseComparator;
 import ru.mail.polis.dao.impl.RocksDAO;
 
 /**

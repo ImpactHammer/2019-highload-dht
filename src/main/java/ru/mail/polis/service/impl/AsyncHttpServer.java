@@ -15,7 +15,6 @@ import org.apache.log4j.Logger;
 import org.jetbrains.annotations.NotNull;
 import ru.mail.polis.Record;
 import ru.mail.polis.dao.DAO;
-import ru.mail.polis.dao.impl.RocksDAO;
 import ru.mail.polis.dao.impl.RocksUtils;
 import ru.mail.polis.service.Service;
 
