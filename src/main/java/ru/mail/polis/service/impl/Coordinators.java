@@ -189,11 +189,12 @@ public class Coordinators {
         }
     }
 
-    private void putWithTimestampMethodWrapper(final ByteBuffer key, final Request request) throws IOException, RocksDBException {
+    private void putWithTimestampMethodWrapper(final ByteBuffer key, final Request request)
+            throws RocksDBException {
         dao.upsertRecordWithTimestamp(key, ByteBuffer.wrap(request.getBody()));
     }
 
-    private void deleteWithTimestampMethodWrapper(final ByteBuffer key) throws IOException, RocksDBException {
+    private void deleteWithTimestampMethodWrapper(final ByteBuffer key) throws RocksDBException {
         dao.removeRecordWithTimestamp(key);
     }
 
@@ -207,7 +208,8 @@ public class Coordinators {
         }
     }
 
-    private byte[] copyAndExtractWithTimestampFromByteBuffer(@NotNull final ByteBuffer key) throws IOException, RocksDBException {
+    private byte[] copyAndExtractWithTimestampFromByteBuffer(@NotNull final ByteBuffer key)
+            throws IOException, RocksDBException {
         final TimestampRecord res = dao.getRecordWithTimestamp(key);
         if(res.isEmpty()){
             throw new NoSuchElementException("Element not found!");

@@ -30,7 +30,6 @@ import java.util.NoSuchElementException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 
-
 public class AsyncHttpServer extends HttpServer implements Service {
     @NotNull
     private final DAO dao;
@@ -48,7 +47,7 @@ public class AsyncHttpServer extends HttpServer implements Service {
      *
      * @param port - network port
      * @param dao - DAO instance
-     * @param workers - executor
+     * @param nodes - cluster topology
      */
     public AsyncHttpServer(final int port, @NotNull final DAO dao,
                            @NotNull final Topology nodes) throws IOException {
@@ -101,7 +100,7 @@ public class AsyncHttpServer extends HttpServer implements Service {
      */
     @Path("/v0/entity")
     public void entity(@Param("id") final String id,
-                       @NotNull final Request request, HttpSession session) throws IOException {
+                       @NotNull final Request request, final HttpSession session) throws IOException {
         if (id == null || id.isEmpty()) {
             executeAsync(session, () -> badRequest());
             return;
