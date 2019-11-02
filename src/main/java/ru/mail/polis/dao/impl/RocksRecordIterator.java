@@ -13,7 +13,7 @@ public class RocksRecordIterator implements Iterator<Record> {
     RocksRecordIterator(final RocksDB db, final ByteBuffer from) {
         super();
         rocksIterator = db.newIterator();
-        final byte[] bytes = RocksDAO.toByteArray(from);
+        final byte[] bytes = RocksUtils.toArrayShifted(from);
 
         rocksIterator.seek(bytes);
     }
@@ -25,8 +25,8 @@ public class RocksRecordIterator implements Iterator<Record> {
 
     @Override
     public Record next() {
-        final Record resultRecord = Record.of(ByteBuffer.wrap(rocksIterator.key()),
-                ByteBuffer.wrap(rocksIterator.value()));
+        final Record resultRecord = Record.of(RocksUtils.fromArrayShifted(rocksIterator.key()),
+                RocksUtils.fromArrayShifted(rocksIterator.value()));
         if (rocksIterator.isValid()) {
             rocksIterator.next();
         }

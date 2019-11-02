@@ -16,6 +16,7 @@ import org.jetbrains.annotations.NotNull;
 import ru.mail.polis.Record;
 import ru.mail.polis.dao.DAO;
 import ru.mail.polis.dao.impl.RocksDAO;
+import ru.mail.polis.dao.impl.RocksUtils;
 import ru.mail.polis.service.Service;
 
 import java.io.IOException;
@@ -39,8 +40,8 @@ public class AsyncHttpServer extends HttpServer implements Service {
      * @param dao - DAO instance
      * @param workers - executor
      */
-    public AsyncHttpServer(final int port, @NotNull final DAO dao,
-                           @NotNull final Executor workers) throws IOException {
+    AsyncHttpServer(final int port, @NotNull final DAO dao,
+                    @NotNull final Executor workers) throws IOException {
         super(from(port));
         this.dao = dao;
         this.workerThreads = workers;
@@ -172,7 +173,7 @@ public class AsyncHttpServer extends HttpServer implements Service {
         Response response;
         try {
             final ByteBuffer value = dao.get(key);
-            final byte[] body = RocksDAO.toByteArray(value);
+            final byte[] body = RocksUtils.toArray(value);
 
             response = new Response(Response.OK, body);
             return response;
