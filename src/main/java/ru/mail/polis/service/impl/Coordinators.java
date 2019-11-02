@@ -7,6 +7,7 @@ import one.nio.http.HttpException;
 import one.nio.http.HttpSession;
 import one.nio.pool.PoolException;
 import org.jetbrains.annotations.NotNull;
+import org.rocksdb.RocksDBException;
 import ru.mail.polis.dao.DAO;
 import ru.mail.polis.dao.impl.RocksDAO;
 import ru.mail.polis.dao.impl.TimestampRecord;
@@ -76,7 +77,7 @@ public class Coordinators {
                         asks++;
                     }
                 }
-            } catch (IOException | HttpException | InterruptedException | PoolException e) {
+            } catch (IOException | HttpException | InterruptedException | PoolException | RocksDBException e) {
                 logger.log(Level.SEVERE, "Exception while deleting by proxy: ", e);
             }
         }
@@ -114,7 +115,7 @@ public class Coordinators {
                         asks++;
                     }
                 }
-            } catch (IOException | HttpException | PoolException | InterruptedException e) {
+            } catch (IOException | HttpException | PoolException | InterruptedException | RocksDBException e) {
                 logger.log(Level.SEVERE, "Exception while putting!", e);
             }
         }
@@ -188,11 +189,11 @@ public class Coordinators {
         }
     }
 
-    private void putWithTimestampMethodWrapper(final ByteBuffer key, final Request request) throws IOException {
+    private void putWithTimestampMethodWrapper(final ByteBuffer key, final Request request) throws IOException, RocksDBException {
         dao.upsertRecordWithTimestamp(key, ByteBuffer.wrap(request.getBody()));
     }
 
-    private void deleteWithTimestampMethodWrapper(final ByteBuffer key) throws IOException {
+    private void deleteWithTimestampMethodWrapper(final ByteBuffer key) throws IOException, RocksDBException {
         dao.removeRecordWithTimestamp(key);
     }
 
@@ -201,12 +202,12 @@ public class Coordinators {
         try {
             final byte[] res = copyAndExtractWithTimestampFromByteBuffer(key);
             return new Response(Response.OK, res);
-        } catch (NoSuchElementException exp) {
+        } catch (NoSuchElementException | RocksDBException exp) {
             return new Response(Response.NOT_FOUND, Response.EMPTY);
         }
     }
 
-    private byte[] copyAndExtractWithTimestampFromByteBuffer(@NotNull final ByteBuffer key) throws IOException {
+    private byte[] copyAndExtractWithTimestampFromByteBuffer(@NotNull final ByteBuffer key) throws IOException, RocksDBException {
         final TimestampRecord res = dao.getRecordWithTimestamp(key);
         if(res.isEmpty()){
             throw new NoSuchElementException("Element not found!");

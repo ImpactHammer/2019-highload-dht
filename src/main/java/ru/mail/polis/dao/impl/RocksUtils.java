@@ -5,7 +5,7 @@ import org.jetbrains.annotations.NotNull;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 
-public class RocksUtils {
+public abstract class RocksUtils {
     /**
      * Retrieve array from a {@link java.nio.ByteBuffer}.
      *

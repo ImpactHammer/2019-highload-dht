@@ -19,12 +19,12 @@ public final class StorageSession extends HttpSession {
 
     private Iterator<Record> records;
 
-    public StorageSession(@NotNull final Socket socket,
+    StorageSession(@NotNull final Socket socket,
                           @NotNull final HttpServer server) {
         super(socket, server);
     }
 
-    public void stream(@NotNull final Iterator<Record> records) throws IOException {
+    void stream(@NotNull final Iterator<Record> records) throws IOException {
         this.records = records;
 
         final Response response = new Response(Response.OK);

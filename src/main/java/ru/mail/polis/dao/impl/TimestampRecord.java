@@ -2,7 +2,6 @@ package ru.mail.polis.dao.impl;
 
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.rocksdb.RocksDBException;
 
 import java.nio.ByteBuffer;
 import java.util.Comparator;
@@ -43,7 +42,7 @@ public class TimestampRecord {
      * @param value to define the value
      * @param type to specify the type of the record
      */
-    public TimestampRecord(final long timestamp, final ByteBuffer value,
+    TimestampRecord(final long timestamp, final ByteBuffer value,
                            final RecordType type) {
         this.timestamp = timestamp;
         this.recordType = type;
@@ -89,7 +88,7 @@ public class TimestampRecord {
         return byteBuff.array();
     }
 
-    public static TimestampRecord fromValue(@NotNull final ByteBuffer value,
+    static TimestampRecord fromValue(@NotNull final ByteBuffer value,
                                             final long timestamp) {
         return new TimestampRecord(timestamp, value, RecordType.VALUE);
     }
@@ -98,11 +97,11 @@ public class TimestampRecord {
         return bytes[0] != RecordType.VALUE.value;
     }
 
-    public static TimestampRecord tombstone(final long timestamp) {
+    static TimestampRecord tombstone(final long timestamp) {
         return new TimestampRecord(timestamp, null, RecordType.DELETED);
     }
 
-    public long getTimestamp() {
+    long getTimestamp() {
         return timestamp;
     }
 

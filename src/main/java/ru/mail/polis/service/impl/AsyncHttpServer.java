@@ -2,10 +2,19 @@ package ru.mail.polis.service.impl;
 
 import com.google.common.base.Charsets;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
-import one.nio.http.*;
+import one.nio.http.HttpClient;
+import one.nio.http.HttpServer;
+import one.nio.http.HttpServerConfig;
+import one.nio.http.HttpSession;
+import one.nio.http.Param;
+import one.nio.http.Path;
+import one.nio.http.Request;
+import one.nio.http.Response;
 import one.nio.net.ConnectionString;
 import one.nio.net.Socket;
 import one.nio.server.AcceptorConfig;
+import org.apache.log4j.LogManager;
+import org.apache.log4j.Logger;
 import org.jetbrains.annotations.NotNull;
 import ru.mail.polis.Record;
 import ru.mail.polis.dao.DAO;
@@ -21,6 +30,7 @@ import java.util.NoSuchElementException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 
+
 public class AsyncHttpServer extends HttpServer implements Service {
     @NotNull
     private final DAO dao;
@@ -31,7 +41,15 @@ public class AsyncHttpServer extends HttpServer implements Service {
     private final Map<String, HttpClient> clusterClients;
     private static final String PROXY_HEADER = "X-OK-Proxy: True";
     private final RF defaultRF;
+    private final Logger log = LogManager.getLogger("default");
 
+    /**
+     * Constructor.
+     *
+     * @param port - network port
+     * @param dao - DAO instance
+     * @param workers - executor
+     */
     public AsyncHttpServer(final int port, @NotNull final DAO dao,
                            @NotNull final Topology nodes) throws IOException {
         super(from(port));
@@ -40,15 +58,15 @@ public class AsyncHttpServer extends HttpServer implements Service {
         this.workerThreads = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors(),
                 new ThreadFactoryBuilder().setNameFormat("worker").build());
 
-        final Map<String, HttpClient> clusterClients = new HashMap<>();
+        final Map<String, HttpClient> clients = new HashMap<>();
         for (final String it : nodes.getNodes()) {
-            if (!nodes.isMe(it) && !clusterClients.containsKey(it)) {
-                clusterClients.put(it, new HttpClient(new ConnectionString(it + "?timeout=100")));
+            if (!nodes.isMe(it) && !clients.containsKey(it)) {
+                clients.put(it, new HttpClient(new ConnectionString(it + "?timeout=100")));
             }
         }
 
         this.nodes = nodes;
-        this.clusterClients = clusterClients;
+        this.clusterClients = clients;
         this.defaultRF = new RF(nodes.getNodes().size() / 2 + 1, nodes.getNodes().size());
         this.clusterSize = nodes.getNodes().size();
     }
@@ -74,6 +92,13 @@ public class AsyncHttpServer extends HttpServer implements Service {
         return Response.ok("OK");
     }
 
+    /**
+     * Single element request handler.
+     *
+     * @param id - element key
+     * @param request - http request
+     * @param session - http session
+     */
     @Path("/v0/entity")
     public void entity(@Param("id") final String id,
                        @NotNull final Request request, HttpSession session) throws IOException {
@@ -117,8 +142,8 @@ public class AsyncHttpServer extends HttpServer implements Service {
     }
 
     @Override
-    public void handleDefault(Request request, HttpSession session) throws IOException {
-        Response response = new Response(Response.BAD_REQUEST, Response.EMPTY);
+    public void handleDefault(final Request request, final HttpSession session) throws IOException {
+        final Response response = new Response(Response.BAD_REQUEST, Response.EMPTY);
         session.sendResponse(response);
     }
 
@@ -126,8 +151,12 @@ public class AsyncHttpServer extends HttpServer implements Service {
         workerThreads.execute(() -> {
             try {
                 session.sendResponse(action.act());
-            } catch (IOException ignored) {
-
+            } catch (IOException e) {
+                try {
+                    session.sendError(Response.INTERNAL_ERROR, e.getMessage());
+                } catch (IOException ex) {
+                    log.debug("Can't send error response");
+                }
             }
         });
     }
@@ -137,9 +166,17 @@ public class AsyncHttpServer extends HttpServer implements Service {
         Response act() throws IOException;
     }
 
+    /**
+     * Multiple element request handler.
+     *
+     * @param start - start key
+     * @param end - end key
+     * @param request - http request
+     * @param session - http session
+     */
     @Path("/v0/entities")
     public void entities(@Param("start") final String start,
-                         @Param("end") String end,
+                         @Param("end") final String end,
                          @NotNull final Request request, @NotNull final HttpSession session) throws IOException {
 
         if (start == null || start.isEmpty()) {
@@ -152,14 +189,12 @@ public class AsyncHttpServer extends HttpServer implements Service {
             return;
         }
 
-        if (end != null && end.isEmpty()) {
-            end = null;
-        }
+        final boolean notEndSpecified = end == null || end.isEmpty();
 
         try {
             final Iterator<Record> records =
                     dao.range(ByteBuffer.wrap(start.getBytes(StandardCharsets.UTF_8)),
-                            end == null ? null : ByteBuffer.wrap(end.getBytes(StandardCharsets.UTF_8)));
+                            notEndSpecified ? null : ByteBuffer.wrap(end.getBytes(StandardCharsets.UTF_8)));
             ((StorageSession) session).stream(records);
         } catch (IOException e) {
             session.sendError(Response.INTERNAL_ERROR, e.getMessage());
@@ -176,7 +211,7 @@ public class AsyncHttpServer extends HttpServer implements Service {
         Response response;
         try {
             final ByteBuffer value = dao.get(key).duplicate();
-            byte[] body = new byte[value.remaining()];
+            final byte[] body = new byte[value.remaining()];
             value.get(body);
             response = new Response(Response.OK, body);
             return response;
