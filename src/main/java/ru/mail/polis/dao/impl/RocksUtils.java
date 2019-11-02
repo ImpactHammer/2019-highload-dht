@@ -7,8 +7,7 @@ import java.util.Arrays;
 
 public final class RocksUtils {
 
-    RocksUtils() {
-
+    private RocksUtils() {
     }
 
     /**
