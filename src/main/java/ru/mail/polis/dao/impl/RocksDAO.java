@@ -8,11 +8,10 @@ import java.util.NoSuchElementException;
 
 import org.jetbrains.annotations.NotNull;
 
-import org.rocksdb.ComparatorOptions;
+import org.rocksdb.BuiltinComparator;
 import org.rocksdb.Options;
 import org.rocksdb.RocksDB;
 import org.rocksdb.RocksDBException;
-import org.rocksdb.util.BytewiseComparator;
 
 import ru.mail.polis.Record;
 import ru.mail.polis.dao.DAO;
@@ -26,19 +25,9 @@ public class RocksDAO implements DAO {
      * @param data Database file
      */
     public RocksDAO(@NotNull final File data) throws RocksDBException {
-        RocksDB.loadLibrary();
         final Options options = new Options().setCreateIfMissing(true);
-        options.setComparator(new BytewiseComparator(new ComparatorOptions()));
+        options.setComparator(BuiltinComparator.BYTEWISE_COMPARATOR);
         db = RocksDB.open(options, data.getAbsolutePath());
-    }
-
-    public static synchronized byte[] toByteArray(final ByteBuffer src) {
-        final ByteBuffer srcCopy = src.duplicate();
-        final ByteBuffer clone = ByteBuffer.allocate(srcCopy.capacity());
-        srcCopy.rewind();
-        clone.put(srcCopy);
-        clone.flip();
-        return clone.array();
     }
 
     @Override
@@ -47,7 +36,7 @@ public class RocksDAO implements DAO {
             @NotNull final ByteBuffer value) throws IOException {
         synchronized (this) {
             try {
-                db.put(toByteArray(key), toByteArray(value));
+                db.put(RocksUtils.toArrayShifted(key), RocksUtils.toArrayShifted(value));
             } catch (RocksDBException e) {
                 throw new IOException(e);
             }
@@ -58,7 +47,7 @@ public class RocksDAO implements DAO {
     public void remove(@NotNull final ByteBuffer key) throws IOException {
         synchronized (this) {
             try {
-                db.delete(toByteArray(key));
+                db.delete(RocksUtils.toArrayShifted(key));
             } catch (RocksDBException e) {
                 throw new IOException(e);
             }
@@ -82,14 +71,14 @@ public class RocksDAO implements DAO {
         synchronized (this) {
             byte[] bytes = null;
             try {
-                bytes = db.get(toByteArray(key));
+                bytes = db.get(RocksUtils.toArrayShifted(key));
             } catch (RocksDBException e) {
                 throw new IOException(e);
             }
             if (bytes == null) {
                 throw new NoSuchElementLite();
             }
-            return ByteBuffer.wrap(bytes);
+            return RocksUtils.fromArrayShifted(bytes);
         }
     }
 
@@ -101,4 +90,57 @@ public class RocksDAO implements DAO {
             throw new IOException(e);
         }
     }
+
+    /**
+     * Get record from DB.
+     *
+     * @param keys to define key
+     * @return record
+     */
+    @NotNull
+    public TimestampRecord getRecordWithTimestamp(@NotNull final ByteBuffer keys)
+            throws IOException, NoSuchElementException {
+        try {
+            final byte[] packedKey = RocksUtils.toArrayShifted(keys);
+            final byte[] valueByteArray = db.get(packedKey);
+            return TimestampRecord.fromBytes(valueByteArray);
+        } catch (RocksDBException exception) {
+            throw new NoSuchElementLite();
+        }
+    }
+
+    /**
+     * Put record into DB.
+     *
+     * @param keys to define key
+     * @param values to define value
+     */
+    public void upsertRecordWithTimestamp(@NotNull final ByteBuffer keys,
+                                          @NotNull final ByteBuffer values) throws IOException {
+        try {
+            final var record = TimestampRecord.fromValue(values, System.currentTimeMillis());
+            final byte[] packedKey = RocksUtils.toArrayShifted(keys);
+            final byte[] arrayValue = record.toBytes();
+            db.put(packedKey, arrayValue);
+        } catch (RocksDBException e) {
+            throw new NoSuchElementLite();
+        }
+    }
+
+    /**
+     * Delete record from DB.
+     *
+     * @param key to define key
+     */
+    public void removeRecordWithTimestamp(@NotNull final ByteBuffer key) throws IOException {
+        try {
+            final byte[] packedKey = RocksUtils.toArrayShifted(key);
+            final var record = TimestampRecord.tombstone(System.currentTimeMillis());
+            final byte[] arrayValue = record.toBytes();
+            db.put(packedKey, arrayValue);
+        } catch (RocksDBException e) {
+            throw new NoSuchElementLite();
+        }
+    }
 }
+

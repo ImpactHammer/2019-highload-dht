@@ -1,5 +1,7 @@
 package ru.mail.polis.service.impl;
 
+import org.jetbrains.annotations.NotNull;
+
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -8,7 +10,7 @@ import java.util.Set;
 
 public class Topology {
     private final List<String> nodes;
-    final String me;
+    private final String me;
 
     /**
      * Constructor.
@@ -22,17 +24,32 @@ public class Topology {
         this.me = me;
     }
 
-    String primaryFor(final ByteBuffer key) {
-        final int hash = key.hashCode();
-        final int node = (hash & Integer.MAX_VALUE) % nodes.size();
-        return nodes.get(node);
-    }
-
-    public Set<String> getAll() {
-        return new HashSet<>(nodes);
-    }
-
     Boolean isMe(final String node) {
         return me.equals(node);
+    }
+
+    String getId() {
+        return this.me;
+    }
+
+    Set<String> getNodes() {
+        return new HashSet<>(this.nodes);
+    }
+
+    /**
+     * Get the clusters ids where the replicas will be created.
+     *
+     * @param count the amount of replicas
+     * @param key key id
+     * @return ids of the clusters to create replicas
+     */
+    String[] replicas(final int count, @NotNull final ByteBuffer key) {
+        final String[] res = new String[count];
+        int index = (key.hashCode() & Integer.MAX_VALUE) % nodes.size();
+        for (int j = 0; j < count; j++) {
+            res[j] = nodes.get(index);
+            index = (index + 1) % nodes.size();
+        }
+        return res;
     }
 }

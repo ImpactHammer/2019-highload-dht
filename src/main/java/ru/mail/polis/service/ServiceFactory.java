@@ -17,15 +17,12 @@
 package ru.mail.polis.service;
 
 import java.io.IOException;
-import java.util.concurrent.Executor;
-import java.util.concurrent.Executors;
 import java.util.Set;
 
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.jetbrains.annotations.NotNull;
 
 import ru.mail.polis.dao.DAO;
-import ru.mail.polis.service.impl.ShardedHttpServer;
+import ru.mail.polis.service.impl.AsyncHttpServer;
 import ru.mail.polis.service.impl.Topology;
 
 /**
@@ -61,9 +58,7 @@ public final class ServiceFactory {
             throw new IllegalArgumentException("Port out of range");
         }
 
-        final Executor executor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors(),
-                new ThreadFactoryBuilder().setNameFormat("worker").build());
         final Topology nodes = new Topology(topology, "http://localhost:" + port);
-        return new ShardedHttpServer(port, dao, executor, nodes);
+        return new AsyncHttpServer(port, dao, nodes);
     }
 }
