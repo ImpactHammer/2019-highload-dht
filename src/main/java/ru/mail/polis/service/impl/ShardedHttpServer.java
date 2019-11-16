@@ -13,10 +13,12 @@ import org.jetbrains.annotations.NotNull;
 import ru.mail.polis.dao.DAO;
 
 import java.io.IOException;
+import java.net.URISyntaxException;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 
 public class ShardedHttpServer extends AsyncHttpServer {
@@ -37,7 +39,7 @@ public class ShardedHttpServer extends AsyncHttpServer {
             @NotNull final Executor executor,
             final Topology topology
     ) throws IOException {
-        super(port, dao, executor);
+        super(port, dao, executor, topology);
         this.topology = topology;
 
         pool = new HashMap<>();
@@ -54,15 +56,21 @@ public class ShardedHttpServer extends AsyncHttpServer {
     @Override
     @Path("/v0/entity")
     public void entity(@Param("id") final String id,
-                       @NotNull final Request request, final HttpSession session) throws IOException {
+                       @Param("replicas") final String replicas,
+                       @Param("proxied") final String proxied,
+                       @NotNull final Request request,
+                       final HttpSession session) throws URISyntaxException
+//            throws IOException, InterruptedException, HttpException,
+//            URISyntaxException, ClassNotFoundException, PoolException
+    {
         if (id == null || id.isEmpty()) {
-            executeAsync(session, () -> badRequest());
+            executeAsync(session, () -> badRequest(request));
             return;
         }
         final ByteBuffer key = ByteBuffer.wrap(id.getBytes(StandardCharsets.UTF_8));
-        final String primary = topology.primaryFor(key);
+        final String primary = topology.getNode(topology.primaryFor(key));
         if (topology.isMe(primary)) {
-            super.entity(id, request, session);
+            super.entity(id, replicas, proxied, request, session);
         } else {
             executeAsync(session, () -> proxy(primary, request));
         }

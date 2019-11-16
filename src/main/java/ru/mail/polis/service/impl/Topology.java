@@ -22,14 +22,21 @@ public class Topology {
         this.me = me;
     }
 
-    String primaryFor(final ByteBuffer key) {
+    int primaryFor(final ByteBuffer key) {
         final int hash = key.hashCode();
-        final int node = (hash & Integer.MAX_VALUE) % nodes.size();
-        return nodes.get(node);
+        return (hash & Integer.MAX_VALUE) % nodes.size();
+    }
+
+    String getNode(int node_id) {
+        return nodes.get(node_id);
     }
 
     public Set<String> getAll() {
         return new HashSet<>(nodes);
+    }
+
+    public int myIndex() {
+        return nodes.indexOf(me);
     }
 
     Boolean isMe(final String node) {

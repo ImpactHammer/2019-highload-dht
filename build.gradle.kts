@@ -38,6 +38,9 @@ dependencies {
     // Logger
     compile("log4j:log4j:1.2.16")
 
+    // HttpClient
+    compile("org.apache.httpcomponents:httpclient:4.5.9")
+
     // JUnit Jupiter test framework
     testCompile("org.junit.jupiter:junit-jupiter-api:5.4.0")
     testRuntime("org.junit.jupiter:junit-jupiter-engine:5.4.0")

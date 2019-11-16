@@ -25,7 +25,7 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.jetbrains.annotations.NotNull;
 
 import ru.mail.polis.dao.DAO;
-import ru.mail.polis.service.impl.ShardedHttpServer;
+import ru.mail.polis.service.impl.AsyncHttpServer;
 import ru.mail.polis.service.impl.Topology;
 
 /**
@@ -49,7 +49,7 @@ public final class ServiceFactory {
      * @return a storage instance
      */
     @NotNull
-    public static Service create(
+    public static AsyncHttpServer create(
             final int port,
             @NotNull final DAO dao,
             @NotNull final Set<String> topology) throws IOException {
@@ -64,6 +64,7 @@ public final class ServiceFactory {
         final Executor executor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors(),
                 new ThreadFactoryBuilder().setNameFormat("worker").build());
         final Topology nodes = new Topology(topology, "http://localhost:" + port);
-        return new ShardedHttpServer(port, dao, executor, nodes);
+        return new ru.mail.polis.service.impl.AsyncHttpServer(port, dao, executor, nodes);
+//        return new ru.mail.polis.service.impl.ShardedHttpServer(port, dao, executor, nodes);
     }
 }
