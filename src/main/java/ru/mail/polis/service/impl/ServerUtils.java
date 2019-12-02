@@ -31,21 +31,16 @@ import java.util.concurrent.Executor;
 import static ru.mail.polis.service.impl.AsyncHttpServer.badRequest;
 
 class ServerUtils {
-
     private final DAO dao;
     Topology topology;
     private final Executor workerThreads;
-
     private List<TimestampRecord> records;
     private CompletableFuture<Void> allFutures;
     private int numberRequestsAccepted;
     private final Object syncIncrement = new Object();
-
     private final Logger log = LogManager.getLogger("default");
-
     private final Map<String, HttpClient> clientMap;
     private final List<Integer> successCodes = new ArrayList<>(Arrays.asList(200, 201, 202, 404));
-
     public static String MESSAGE_WRONG_METHOD = "Wrong method";
 
     ServerUtils(final DAO dao, final Topology topology, final Executor workers) {
@@ -84,10 +79,8 @@ class ServerUtils {
         }
     }
 
-    void processDirect(final ByteBuffer key, final String replicas,
-                       final Request request, final HttpSession session,
-                       final Topology topology)
-            throws URISyntaxException, IOException {
+    void processDirect(final ByteBuffer key, final String replicas, final Request request, final HttpSession session,
+                       final Topology topology) throws URISyntaxException, IOException {
         int ack;
         int from;
         if (replicas == null) {
@@ -197,18 +190,24 @@ class ServerUtils {
         return null;
     }
 
+    byte[] get(final ByteBuffer key) {
+        byte[] body = null;
+        try {
+            final ByteBuffer value = dao.get(key);
+            body = RocksUtils.toArray(value);
+        } catch (NoSuchElementException | IOException e) {
+            log.debug(e.getMessage());
+        }
+        return body;
+    }
+
     private Void handleLocal(final Request request, final ByteBuffer key, final HttpSession session, final int ack) {
         byte[] body = null;
         boolean knownMethod = true;
         try {
             switch (request.getMethod()) {
                 case Request.METHOD_GET:
-                    try {
-                        final ByteBuffer value = dao.get(key);
-                        body = RocksUtils.toArray(value);
-                    } catch (NoSuchElementException e) {
-                        log.debug(e.getMessage());
-                    }
+                    body = get(key);
                     if (body == null) {
                         records.add(null);
                     } else {
