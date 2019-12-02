@@ -107,7 +107,10 @@ public class TimestampRecord {
     public static TimestampRecord latestOf(final List<TimestampRecord> records) {
         TimestampRecord result = null;
         for (final TimestampRecord record : records) {
-            if (record != null && result == null || record.timestamp > result.timestamp) {
+            if (record == null) {
+                continue;
+            }
+            if (result == null || record.timestamp > result.timestamp) {
                 result = record;
             }
         }

@@ -71,13 +71,17 @@ class ServerUtils {
             try {
                 session.sendResponse(action.act());
             } catch (IOException e) {
-                try {
-                    session.sendError(Response.INTERNAL_ERROR, e.getMessage());
-                } catch (IOException ex) {
-                    log.debug("Can't send error response");
-                }
+                internalError(session, e);
             }
         });
+    }
+
+    void internalError(final HttpSession session, IOException e) {
+        try {
+            session.sendError(Response.INTERNAL_ERROR, e.getMessage());
+        } catch (IOException ex) {
+            log.debug("Can't send error response");
+        }
     }
 
     void processDirect(final ByteBuffer key, final String replicas,

@@ -30,7 +30,7 @@ public class AsyncHttpServer extends HttpServer implements Service {
     @NotNull
     private final DAO dao;
 
-    final private ServerUtils serverUtils;
+    private final ServerUtils serverUtils;
 
     /**
      * Constructor.
