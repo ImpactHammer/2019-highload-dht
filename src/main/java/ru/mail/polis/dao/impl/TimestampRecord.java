@@ -1,25 +1,35 @@
 package ru.mail.polis.dao.impl;
 
-import java.io.*;
+import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.Arrays;
 import java.util.List;
 
 public class TimestampRecord {
     private byte[] value;
     private long timestamp;
 
-    public static int TYPE_EMPTY = 0;
+    public static int TYPE_EMPTY;
     public static int TYPE_DELETED = 1;
     public static int TYPE_VALUE = 2;
 
     private int type;
 
+    /**
+     * Constructor.
+     *
+     * @param value - byte array to be wrapped
+     */
     public TimestampRecord(byte[] value) {
         this(value, System.currentTimeMillis());
     }
 
-    public TimestampRecord(byte[] value, long timestamp) {
+    /**
+     * Constructor.
+     *
+     * @param value - byte array to be wrapped
+     * @param timestamp - timestamp of record creation
+     */
+    public TimestampRecord(final byte[] value, final long timestamp) {
         if (value == null) {
             this.type = TYPE_DELETED;
         } else if (value.length == 0) {
@@ -27,7 +37,7 @@ public class TimestampRecord {
         } else {
             this.type = TYPE_VALUE;
         }
-        this.value = value;
+        this.value = value == null ? null : value.clone();
         this.timestamp = timestamp;
     }
 
@@ -39,13 +49,11 @@ public class TimestampRecord {
         return this.type;
     }
 
-//    public byte[] toByteArray() throws IOException {
-//        ByteArrayOutputStream out = new ByteArrayOutputStream();
-//        ObjectOutputStream os = new ObjectOutputStream(out);
-//        os.writeObject(this);
-//        return out.toByteArray();
-//    }
-
+    /**
+     * Serialize this record to byte array.
+     *
+     * @return resulting byte array
+     */
     public byte[] toByteArray() throws IOException {
         ByteBuffer buffer;
         if (value == null) {
@@ -58,17 +66,22 @@ public class TimestampRecord {
             buffer.putLong(this.timestamp);
             buffer.put(value);
         }
-        byte[] result = buffer.array();
-        return result;
+        return buffer.array();
     }
 
-    public static TimestampRecord fromByteArray(byte[] bytes) {
+    /**
+     * Deserialize record from byte array.
+     *
+     * @param bytes - given byte array
+     * @return resulting record
+     */
+    public static TimestampRecord fromByteArray(final byte[] bytes) {
         if (bytes == null || bytes.length < Long.BYTES + Integer.BYTES) {
             return null;
         }
-        ByteBuffer buffer = ByteBuffer.wrap(bytes);
-        int type = buffer.getInt();
-        long timestamp = buffer.getLong();
+        final ByteBuffer buffer = ByteBuffer.wrap(bytes);
+        final int type = buffer.getInt();
+        final long timestamp = buffer.getLong();
         byte[] value;
         if (type == TYPE_VALUE) {
             value = new byte[buffer.remaining()];
@@ -80,34 +93,30 @@ public class TimestampRecord {
         } else {
             return null;
         }
-        return new TimestampRecord(value, timestamp);
+        TimestampRecord result = new TimestampRecord(value);
+        result.setTimestamp(timestamp);
+        return result;
     }
 
-
-
-//    public static TimestampRecord fromByteArray(byte[] bytes) throws IOException, ClassNotFoundException {
-//        if (bytes == null) {
-//            return null;
-//        }
-//        ByteArrayInputStream in = new ByteArrayInputStream(bytes);
-//        ObjectInputStream is = new ObjectInputStream(in);
-//        return (TimestampRecord) is.readObject();
-//    }
-
-    public static TimestampRecord latestOf(List<TimestampRecord> records) {
+    /**
+     * Get record with latest timestamp from list.
+     *
+     * @param records - list of records
+     * @return resulting record
+     */
+    public static TimestampRecord latestOf(final List<TimestampRecord> records) {
         TimestampRecord result = null;
-        for (TimestampRecord record : records) {
+        for (final TimestampRecord record : records) {
             if (record != null) {
-                if (result == null) {
-                    result = record;
-                } else if (record.timestamp > result.timestamp) {
+                if (result == null || (record.timestamp > result.timestamp)) {
                     result = record;
                 }
             }
         }
-//        if (result != null) {
-//            System.out.println(Arrays.toString(result.getValue()));
-//        }
         return result;
+    }
+
+    private void setTimestamp(long timestamp) {
+        this.timestamp = timestamp;
     }
 }

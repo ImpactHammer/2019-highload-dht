@@ -43,7 +43,7 @@ final class StorageSession extends HttpSession {
         next();
     }
 
-    private byte[] getByteArr(final int size){
+    private byte[] getByteArr(final int size) {
         return new byte[size];
     }
 
@@ -53,7 +53,7 @@ final class StorageSession extends HttpSession {
             final byte[] key = RocksUtils.toArray(record.getKey());
             byte[] value = RocksUtils.toArray(record.getValue());
 
-            TimestampRecord tsRecord = TimestampRecord.fromByteArray(value);
+            final TimestampRecord tsRecord = TimestampRecord.fromByteArray(value);
             value = tsRecord.getValue();
 
             final int payloadLength = key.length + 1 + value.length;
@@ -79,7 +79,7 @@ final class StorageSession extends HttpSession {
             server.incRequestsProcessed();
 
             if ((handling = pipeline.pollFirst()) != null) {
-                if(handling == FIN) {
+                if (handling == FIN) {
                     scheduleClose();
                 } else {
                     try {

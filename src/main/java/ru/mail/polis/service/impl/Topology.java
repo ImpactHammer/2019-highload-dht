@@ -27,8 +27,8 @@ public class Topology {
         return (hash & Integer.MAX_VALUE) % nodes.size();
     }
 
-    String getNode(int node_id) {
-        return nodes.get(node_id);
+    String getNode(final int nodeId) {
+        return nodes.get(nodeId);
     }
 
     public Set<String> getAll() {

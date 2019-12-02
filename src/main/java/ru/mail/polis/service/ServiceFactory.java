@@ -64,7 +64,6 @@ public final class ServiceFactory {
         final Executor executor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors(),
                 new ThreadFactoryBuilder().setNameFormat("worker").build());
         final Topology nodes = new Topology(topology, "http://localhost:" + port);
-        return new ru.mail.polis.service.impl.AsyncHttpServer(port, dao, executor, nodes);
-//        return new ru.mail.polis.service.impl.ShardedHttpServer(port, dao, executor, nodes);
+        return new AsyncHttpServer(port, dao, executor, nodes);
     }
 }
