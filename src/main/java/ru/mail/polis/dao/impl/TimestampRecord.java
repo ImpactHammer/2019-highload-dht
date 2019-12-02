@@ -19,14 +19,14 @@ public class TimestampRecord {
      *
      * @param value - byte array to be wrapped
      */
-    public TimestampRecord(byte[] value) {
+    public TimestampRecord(final byte[] value) {
         this(value, System.currentTimeMillis());
     }
 
     /**
      * Constructor.
      *
-     * @param value - byte array to be wrapped
+     * @param value     - byte array to be wrapped
      * @param timestamp - timestamp of record creation
      */
     public TimestampRecord(final byte[] value, final long timestamp) {
@@ -42,7 +42,7 @@ public class TimestampRecord {
     }
 
     public byte[] getValue() {
-        return this.value;
+        return this.value.clone();
     }
 
     public int getType() {
@@ -93,7 +93,7 @@ public class TimestampRecord {
         } else {
             return null;
         }
-        TimestampRecord result = new TimestampRecord(value);
+        final TimestampRecord result = new TimestampRecord(value);
         result.setTimestamp(timestamp);
         return result;
     }
@@ -107,16 +107,14 @@ public class TimestampRecord {
     public static TimestampRecord latestOf(final List<TimestampRecord> records) {
         TimestampRecord result = null;
         for (final TimestampRecord record : records) {
-            if (record != null) {
-                if (result == null || (record.timestamp > result.timestamp)) {
-                    result = record;
-                }
+            if (record != null && result == null || record.timestamp > result.timestamp) {
+                result = record;
             }
         }
         return result;
     }
 
-    private void setTimestamp(long timestamp) {
+    private void setTimestamp(final long timestamp) {
         this.timestamp = timestamp;
     }
 }
