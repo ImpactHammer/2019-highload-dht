@@ -25,13 +25,12 @@ import java.util.Iterator;
 import java.util.NoSuchElementException;
 import java.util.concurrent.Executor;
 
-
 public class AsyncHttpServer extends HttpServer implements Service {
     private final Topology topology;
     @NotNull
     private final DAO dao;
 
-    private ServerUtils serverUtils;
+    private final ServerUtils serverUtils;
 
     /**
      * Constructor.
@@ -42,7 +41,7 @@ public class AsyncHttpServer extends HttpServer implements Service {
      */
     public AsyncHttpServer(final int port, @NotNull final DAO dao,
                            @NotNull final Executor workers,
-                           Topology topology) throws IOException {
+                           final Topology topology) throws IOException {
         super(from(port));
         this.dao = dao;
         this.topology = topology;
@@ -66,7 +65,6 @@ public class AsyncHttpServer extends HttpServer implements Service {
         return new StorageSession(socket, this);
     }
 
-
     @Path("/v0/status")
     public Response status() {
         return Response.ok("OK");
@@ -82,7 +80,8 @@ public class AsyncHttpServer extends HttpServer implements Service {
     @Path("/v0/entity")
     public void entity(@Param("id") final String id, @Param("replicas") final String replicas,
                        @Param("proxied") final String proxied,
-                       @NotNull final Request request, final HttpSession session) throws URISyntaxException, IOException {
+                       @NotNull final Request request, final HttpSession session)
+            throws URISyntaxException, IOException {
         if (id == null || id.isEmpty()) {
             this.serverUtils.executeAsync(workers, session, () -> badRequest(request));
             return;
@@ -120,7 +119,6 @@ public class AsyncHttpServer extends HttpServer implements Service {
         final Response response = new Response(Response.BAD_REQUEST, Response.EMPTY);
         session.sendResponse(response);
     }
-
 
     @FunctionalInterface
     interface Action {
@@ -185,7 +183,7 @@ public class AsyncHttpServer extends HttpServer implements Service {
 
     @NotNull
     private Response putMethodWrapper(final ByteBuffer key, final Request request) throws IOException {
-        byte[] body = new TimestampRecord(request.getBody()).toByteArray();
+        final byte[] body = new TimestampRecord(request.getBody()).toByteArray();
         if (body != null) {
             dao.upsert(key, ByteBuffer.wrap(body));
         }
