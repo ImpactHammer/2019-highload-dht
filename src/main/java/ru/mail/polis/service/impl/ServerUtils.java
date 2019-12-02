@@ -1,10 +1,6 @@
 package ru.mail.polis.service.impl;
 
-import one.nio.http.HttpClient;
-import one.nio.http.HttpException;
-import one.nio.http.HttpSession;
-import one.nio.http.Request;
-import one.nio.http.Response;
+import one.nio.http.*;
 import one.nio.net.ConnectionString;
 import one.nio.pool.PoolException;
 import org.apache.http.client.utils.URIBuilder;
@@ -18,12 +14,7 @@ import ru.mail.polis.dao.impl.TimestampRecord;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.NoSuchElementException;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
@@ -31,19 +22,24 @@ import java.util.concurrent.Executor;
 import static ru.mail.polis.service.impl.AsyncHttpServer.badRequest;
 
 class ServerUtils {
+
     private final DAO dao;
     Topology topology;
     private final Executor workerThreads;
+
     private List<TimestampRecord> records;
     private CompletableFuture<Void> allFutures;
     private int numberRequestsAccepted;
     private final Object syncIncrement = new Object();
+
     private final Logger log = LogManager.getLogger("default");
+
     private final Map<String, HttpClient> clientMap;
     private final List<Integer> successCodes = new ArrayList<>(Arrays.asList(200, 201, 202, 404));
+
     public static String MESSAGE_WRONG_METHOD = "Wrong method";
 
-    ServerUtils(final DAO dao, final Topology topology, final Executor workers) {
+    ServerUtils(DAO dao, Topology topology, Executor workers) {
         this.topology = topology;
         this.workerThreads = workers;
         this.dao = dao;
@@ -60,35 +56,30 @@ class ServerUtils {
         return from % 2 == 1 ? from / 2 + 1 : from / 2;
     }
 
-    void executeAsync(final Executor workers, @NotNull final HttpSession session,
-                      @NotNull final AsyncHttpServer.Action action) {
+    void executeAsync(Executor workers, @NotNull final HttpSession session, @NotNull final AsyncHttpServer.Action action) {
         workers.execute(() -> {
             try {
                 session.sendResponse(action.act());
             } catch (IOException e) {
-                internalError(session, e);
+                try {
+                    session.sendError(Response.INTERNAL_ERROR, e.getMessage());
+                } catch (IOException ex) {
+                    log.debug("Can't send error response");
+                }
             }
         });
     }
 
-    void internalError(final HttpSession session, IOException e) {
-        try {
-            session.sendError(Response.INTERNAL_ERROR, e.getMessage());
-        } catch (IOException ex) {
-            log.debug("Can't send error response");
-        }
-    }
-
-    void processDirect(final ByteBuffer key, final String replicas, final Request request, final HttpSession session,
-                       final Topology topology) throws URISyntaxException, IOException {
-        int ack;
-        int from;
+    void processDirect(ByteBuffer key, final String replicas,
+                       final Request request, final HttpSession session, final Topology topology) throws URISyntaxException, IOException {
+        int ack, from;
         if (replicas == null) {
             final int clusterSize = topology.getAll().size();
             ack = quorum(clusterSize);
             from = clusterSize;
         } else {
-            @SuppressWarnings("StringSplitter") final String[] replicasSplitted = replicas.split("/");
+            @SuppressWarnings("StringSplitter")
+            final String[] replicasSplitted = replicas.split("/");
             ack = Integer.parseInt(replicasSplitted[0]);
             from = Integer.parseInt(replicasSplitted[1]);
         }
@@ -100,7 +91,7 @@ class ServerUtils {
 
         final int fromNode = topology.primaryFor(key);
 
-        final URIBuilder uriBuilder = new URIBuilder(request.getURI());
+        URIBuilder uriBuilder = new URIBuilder(request.getURI());
         uriBuilder.addParameter("proxied", "true");
 
         String newURI = uriBuilder.build().toString();
@@ -115,7 +106,7 @@ class ServerUtils {
             if (topology.isMe(nodeName)) {
                 futures.add(CompletableFuture.supplyAsync(() -> handleLocal(request, key, session, ack)));
             } else {
-                final String finalNewURI = newURI;
+                String finalNewURI = newURI;
                 futures.add(CompletableFuture.supplyAsync(() -> handleRemote(nodeName, request, finalNewURI, ack)));
             }
         }
@@ -190,51 +181,52 @@ class ServerUtils {
         return null;
     }
 
-    byte[] get(final ByteBuffer key) {
-        byte[] body = null;
-        try {
-            final ByteBuffer value = dao.get(key);
-            body = RocksUtils.toArray(value);
-        } catch (NoSuchElementException | IOException e) {
-            log.debug(e.getMessage());
-        }
-        return body;
-    }
-
     private Void handleLocal(final Request request, final ByteBuffer key, final HttpSession session, final int ack) {
         byte[] body = null;
         boolean knownMethod = true;
-        try {
-            switch (request.getMethod()) {
-                case Request.METHOD_GET:
-                    body = get(key);
-                    if (body == null) {
-                        records.add(null);
-                    } else {
-                        records.add(TimestampRecord.fromByteArray(body));
-                    }
-                    break;
-                case Request.METHOD_PUT:
-                    final TimestampRecord r = new TimestampRecord(request.getBody());
+        switch (request.getMethod()) {
+            case Request.METHOD_GET:
+                try {
+                    ByteBuffer value = dao.get(key);
+                    body = RocksUtils.toArray(value);
+                } catch (NoSuchElementException | IOException e) {
+                    log.debug(e.getMessage());
+                }
+                if (body == null) {
+                    records.add(null);
+                } else {
+                    records.add(TimestampRecord.fromByteArray(body));
+                }
+                break;
+            case Request.METHOD_PUT:
+                final TimestampRecord r = new TimestampRecord(request.getBody());
+                try {
                     body = r.toByteArray();
                     if (body != null) {
                         dao.upsert(key, ByteBuffer.wrap(body));
                     }
-                    records.add(TimestampRecord.fromByteArray(body));
-                    break;
-                case Request.METHOD_DELETE:
+                } catch (IOException e) {
+                    log.debug(e.getMessage());
+                }
+                records.add(TimestampRecord.fromByteArray(body));
+                break;
+            case Request.METHOD_DELETE:
+                try {
                     dao.remove(key);
                     body = new TimestampRecord(null).toByteArray();
                     dao.upsert(key, ByteBuffer.wrap(body));
-                    records.add(TimestampRecord.fromByteArray(body));
-                    break;
-                default:
+                } catch (IOException e) {
+                    log.debug(e.getMessage());
+                }
+                records.add(TimestampRecord.fromByteArray(body));
+                break;
+            default:
+                try {
                     session.sendError(Response.METHOD_NOT_ALLOWED, MESSAGE_WRONG_METHOD);
-                    knownMethod = false;
-                    break;
-            }
-        } catch (IOException e) {
-            log.debug(e.getMessage());
+                } catch (IOException e) {
+                    log.debug(e.getMessage());
+                }
+                knownMethod = false;
         }
         if (knownMethod) {
             synchronized (syncIncrement) {
