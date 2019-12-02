@@ -63,8 +63,8 @@ public class TimestampRecord {
         } else {
             buffer = ByteBuffer.allocate(Long.BYTES + Integer.BYTES + value.length);
             buffer.putInt(this.type);
-            buffer.putLong(this.timestamp);
             buffer.put(value);
+            buffer.putLong(this.timestamp);
         }
         return buffer.array();
     }
@@ -81,10 +81,9 @@ public class TimestampRecord {
         }
         final ByteBuffer buffer = ByteBuffer.wrap(bytes);
         final int type = buffer.getInt();
-        final long timestamp = buffer.getLong();
         byte[] value;
         if (type == TYPE_VALUE) {
-            value = new byte[buffer.remaining()];
+            value = new byte[buffer.remaining() - Long.BYTES];
             buffer.get(value);
         } else if (type == TYPE_EMPTY) {
             value = new byte[0];
@@ -94,7 +93,7 @@ public class TimestampRecord {
             return null;
         }
         final TimestampRecord result = new TimestampRecord(value);
-        result.setTimestamp(timestamp);
+        result.setTimestamp(buffer.getLong());
         return result;
     }
 
