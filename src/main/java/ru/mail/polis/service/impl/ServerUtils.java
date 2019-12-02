@@ -201,136 +201,40 @@ class ServerUtils {
         return body;
     }
 
-
-
-//    private Void handleLocal(final Request request, final ByteBuffer key, final HttpSession session, final int ack) {
-//        byte[] body = null;
-//        boolean knownMethod = true;
-//        try {
-//            switch (request.getMethod()) {
-//                case Request.METHOD_GET:
-//                    body = get(key);
-//                    if (body == null) {
-//                        records.add(null);
-//                    } else {
-//                        records.add(TimestampRecord.fromByteArray(body));
-//                    }
-//                    break;
-//                case Request.METHOD_PUT:
-//                    final TimestampRecord r = new TimestampRecord(request.getBody());
-//                    body = r.toByteArray();
-//                    if (body != null) {
-//                        dao.upsert(key, ByteBuffer.wrap(body));
-//                    }
-//                    records.add(TimestampRecord.fromByteArray(body));
-//                    break;
-//                case Request.METHOD_DELETE:
-//                    dao.remove(key);
-//                    body = new TimestampRecord(null).toByteArray();
-//                    dao.upsert(key, ByteBuffer.wrap(body));
-//                    records.add(TimestampRecord.fromByteArray(body));
-//                    break;
-//                default:
-//                    session.sendError(Response.METHOD_NOT_ALLOWED, MESSAGE_WRONG_METHOD);
-//                    knownMethod = false;
-//                    break;
-//            }
-//        } catch (IOException e) {
-//            log.debug(e.getMessage());
-//        }
-//        if (knownMethod) {
-//            synchronized (syncIncrement) {
-//                numberRequestsAccepted++;
-//                if (numberRequestsAccepted >= ack) {
-//                    allFutures.complete(null);
-//                }
-//            }
-//        }
-//        return null;
-//    }
-
-
-
-
     private Void handleLocal(final Request request, final ByteBuffer key, final HttpSession session, final int ack) {
         byte[] body = null;
         boolean knownMethod = true;
-//        try {
-//            switch (request.getMethod()) {
-//                case Request.METHOD_GET:
-//                    body = get(key);
-//                    if (body == null) {
-//                        records.add(null);
-//                    } else {
-//                        records.add(TimestampRecord.fromByteArray(body));
-//                    }
-//                    break;
-//                case Request.METHOD_PUT:
-//                    final TimestampRecord r = new TimestampRecord(request.getBody());
-//                    body = r.toByteArray();
-//                    if (body != null) {
-//                        dao.upsert(key, ByteBuffer.wrap(body));
-//                    }
-//                    records.add(TimestampRecord.fromByteArray(body));
-//                    break;
-//                case Request.METHOD_DELETE:
-//                    dao.remove(key);
-//                    body = new TimestampRecord(null).toByteArray();
-//                    dao.upsert(key, ByteBuffer.wrap(body));
-//                    records.add(TimestampRecord.fromByteArray(body));
-//                    break;
-//                default:
-//                    session.sendError(Response.METHOD_NOT_ALLOWED, MESSAGE_WRONG_METHOD);
-//                    knownMethod = false;
-//                    break;
-//            }
-//        } catch (IOException e) {
-//            log.debug(e.getMessage());
-//        }
-
-        switch (request.getMethod()) {
-            case Request.METHOD_GET:
-                try {
-                    ByteBuffer value = dao.get(key);
-                    body = RocksUtils.toArray(value);
-                } catch (NoSuchElementException | IOException e) {
-                    log.debug(e.getMessage());
-                }
-                if (body == null) {
-                    records.add(null);
-                } else {
-                    records.add(TimestampRecord.fromByteArray(body));
-                }
-                break;
-            case Request.METHOD_PUT:
-                final TimestampRecord r = new TimestampRecord(request.getBody());
-                try {
+        try {
+            switch (request.getMethod()) {
+                case Request.METHOD_GET:
+                    body = get(key);
+                    if (body == null) {
+                        records.add(null);
+                    } else {
+                        records.add(TimestampRecord.fromByteArray(body));
+                    }
+                    break;
+                case Request.METHOD_PUT:
+                    final TimestampRecord r = new TimestampRecord(request.getBody());
                     body = r.toByteArray();
                     if (body != null) {
                         dao.upsert(key, ByteBuffer.wrap(body));
                     }
-                } catch (IOException e) {
-                    log.debug(e.getMessage());
-                }
-                records.add(TimestampRecord.fromByteArray(body));
-                break;
-            case Request.METHOD_DELETE:
-                try {
+                    records.add(TimestampRecord.fromByteArray(body));
+                    break;
+                case Request.METHOD_DELETE:
                     dao.remove(key);
                     body = new TimestampRecord(null).toByteArray();
                     dao.upsert(key, ByteBuffer.wrap(body));
-                } catch (IOException e) {
-                    log.debug(e.getMessage());
-                }
-                records.add(TimestampRecord.fromByteArray(body));
-                break;
-            default:
-                try {
+                    records.add(TimestampRecord.fromByteArray(body));
+                    break;
+                default:
                     session.sendError(Response.METHOD_NOT_ALLOWED, MESSAGE_WRONG_METHOD);
-                } catch (IOException e) {
-                    log.debug(e.getMessage());
-                }
-                knownMethod = false;
+                    knownMethod = false;
+                    break;
+            }
+        } catch (IOException e) {
+            log.debug(e.getMessage());
         }
         if (knownMethod) {
             synchronized (syncIncrement) {
